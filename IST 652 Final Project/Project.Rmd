@@ -1,0 +1,412 @@
+---
+title: "IST 652 Project"
+author: "Nick Rovelli"
+date: "2024-12-03"
+output: html_document
+---
+```{r}
+#1
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(paletteer)
+library(devtools)
+devtools::install_github("FCrSTATS/SBpitch")
+library(SBpitch)
+library(cowplot)
+remotes::install_github("statsbomb/StatsBombR")
+library(extrafont)
+```
+
+
+```{r setup, include=FALSE}
+#2
+setwd("C:/Users/nickr/OneDrive/Syracuse/Courses/IST 652/Project")
+
+all_data <- read.csv("Barcelona_Data.csv")
+
+wins <- read.csv("Barcelona_Wins.csv")
+
+nonwins <- read.csv("Barcelona_Non-Wins.csv")
+```
+
+```{r}
+#3
+#all
+all_data[c("location_x", "location_y")] <- 
+  str_split_fixed(all_data$location, ",", 2)
+
+all_data$location_x <- 
+  str_remove(all_data$location_x, "c")
+
+all_data$location_x <- 
+  str_remove(all_data$location_x, "\\[")
+
+all_data$location_y <- 
+  str_remove(all_data$location_y, "\\]")
+
+all_data$location_x <- as.numeric(all_data$location_x)
+all_data$location_y <- as.numeric(all_data$location_y)
+
+#end location
+all_data[c("pass_end_location_x", "pass_end_location_y")] <- 
+  str_split_fixed(all_data$pass_end_location, ",", 2)
+
+all_data$pass_end_location_x <- 
+  str_remove(all_data$pass_end_location_x, "c")
+
+all_data$pass_end_location_x <- 
+  str_remove(all_data$pass_end_location_x, "\\[")
+
+all_data$pass_end_location_y <- 
+  str_remove(all_data$pass_end_location_y, "\\]")
+
+all_data$pass_end_location_x <- as.numeric(all_data$pass_end_location_x)
+all_data$pass_end_location_y <- as.numeric(all_data$pass_end_location_y)
+
+#wins
+wins[c("location_x", "location_y")] <- 
+  str_split_fixed(wins$location, ",", 2)
+
+wins$location_x <- 
+  str_remove(wins$location_x, "c")
+
+wins$location_x <- 
+  str_remove(wins$location_x, "\\[")
+
+wins$location_y <- 
+  str_remove(wins$location_y, "\\]")
+
+wins$location_x <- as.numeric(wins$location_x)
+wins$location_y <- as.numeric(wins$location_y)
+
+#non wins
+nonwins[c("location_x", "location_y")] <- 
+  str_split_fixed(nonwins$location, ",", 2)
+
+nonwins$location_x <- 
+  str_remove(nonwins$location_x, "c")
+
+nonwins$location_x <- 
+  str_remove(nonwins$location_x, "\\[")
+
+nonwins$location_y <- 
+  str_remove(nonwins$location_y, "\\]")
+
+nonwins$location_x <- as.numeric(nonwins$location_x)
+nonwins$location_y <- as.numeric(nonwins$location_y)
+```
+
+```{r}
+#3
+#passes
+barca_passes <- all_data %>% 
+  filter(type_name == "Pass" & possession_team_name == "Barcelona")
+
+opp_passes <- all_data %>% 
+  filter(type_name == "Pass" & possession_team_name != "Barcelona")
+```
+
+```{r}
+#4
+palette <- paletteer_d("RColorBrewer::YlOrRd", direction = 1)
+
+#Barcelona
+pass <- create_Pitch(grass_colour = "gray15", 
+                                         background_colour = "gray15", 
+                                         line_colour = "white") + 
+  geom_density_2d_filled(data = barca_passes, 
+                         aes(x = location_x, y = location_y, fill = ..level..,), 
+                         alpha = 0.4, contour_var = "ndensity", 
+                         breaks = seq(0.1, 1.0, length.out = 10)) + 
+  theme(legend.position = "none") + 
+  scale_x_continuous(limits = c(0, 120)) + 
+  scale_y_continuous(limits = c(0, 80)) + 
+  scale_fill_manual(values = c(palette), aesthetics = c("fill", "color")) + 
+  theme(legend.position = "none", 
+        plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = .5, size = 22, 
+                                  family = "Comic Sons MS", face = "bold", 
+                                  vjust =  -1)) + 
+  labs(title = "Barcelona Passes")
+
+#Opponent
+opass <- create_Pitch(grass_colour = "gray15", 
+                                         background_colour = "gray15", 
+                                         line_colour = "white") + 
+  geom_density_2d_filled(data = opp_passes, 
+                         aes(x = location_x, y = location_y, fill = ..level..,), 
+                         alpha = 0.4, contour_var = "ndensity", 
+                         breaks = seq(0.1, 1.0, length.out = 10)) + 
+  theme(legend.position = "none") + 
+  scale_x_continuous(limits = c(0, 120)) + 
+  scale_y_continuous(limits = c(0, 80)) + 
+  scale_fill_manual(values = c(palette), aesthetics = c("fill", "color")) + 
+  theme(legend.position = "none", 
+        plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = .5, size = 22, 
+                                  family = "Comic Sons MS", face = "bold", 
+                                  vjust =  -1)) + 
+  labs(title = "Barcelona Opponent Passes")
+
+ggsave("Opponent Passes.png", plot = opass, dpi = 300)
+
+opass
+```
+
+```{r}
+#5
+shot_pass <- all_data %>% 
+  filter(possession_team_name == "Barcelona" & pass_shot_assist == "True" & player_name != "Lionel Andrés Messi Cuccittini")
+
+messi_shot_pass <- all_data %>% 
+  filter(possession_team_name == "Barcelona" & pass_shot_assist == "True" & player_name == "Lionel Andrés Messi Cuccittini")
+```
+
+```{r}
+#6
+palette <- brewer.pal(8, "Set3") # Change "Set3" to another Brewer palette if desired
+palette <- colorRampPalette(palette)(21)
+
+spass <- create_Pitch(grass_colour = "gray15", 
+             background_colour = "gray15", 
+             line_colour = "white") + 
+  # Add line segments for passes
+  geom_segment(data = shot_pass, 
+               aes(x = location_x, y = location_y, 
+                   xend = pass_end_location_x, yend = pass_end_location_y, 
+                   color = player_name), 
+               size = 1, alpha = 0.7) + 
+  # Add density plot
+  geom_density_2d_filled(data = shot_pass, 
+                         aes(x = location_x, y = location_y, fill = ..level..), 
+                         alpha = 0.4, contour_var = "ndensity", 
+                         breaks = seq(0.1, 1.0, length.out = 10)) + 
+  # Add points for start locations
+  geom_point(data = shot_pass, 
+             aes(x = location_x, y = location_y, color = player_name), 
+             size = 2, alpha = 0.8) + 
+  # Set the scales and limits
+  scale_x_continuous(limits = c(0, 120)) + 
+  scale_y_continuous(limits = c(0, 80)) + 
+  scale_fill_manual(values = c(palette), aesthetics = c("fill", "color")) + 
+  # Adjust theme
+  theme(legend.position = "none", 
+        plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = .5, size = 22, 
+                                  family = "Comic Sans MS", face = "bold", 
+                                  vjust = -1)) + 
+  labs(title = "Rest of Barcelona's Passes that Lead to Shots")
+
+palette <- colorRampPalette(palette)(21)
+
+spass <- create_Pitch(grass_colour = "gray15", 
+             background_colour = "gray15", 
+             line_colour = "white") + 
+  # Add line segments for passes
+  geom_segment(data = messi_shot_pass, 
+               aes(x = location_x, y = location_y, 
+                   xend = pass_end_location_x, yend = pass_end_location_y, 
+                   color = player_name), 
+               size = 1, alpha = 0.7) + 
+  # Add density plot
+  geom_density_2d_filled(data = messi_shot_pass, 
+                         aes(x = location_x, y = location_y, fill = ..level..), 
+                         alpha = 0.4, contour_var = "ndensity", 
+                         breaks = seq(0.1, 1.0, length.out = 10)) + 
+  # Add points for start locations
+  geom_point(data = messi_1shot_pass, 
+             aes(x = location_x, y = location_y, color = player_name), 
+             size = 2, alpha = 0.8) + 
+  # Set the scales and limits
+  scale_x_continuous(limits = c(0, 120)) + 
+  scale_y_continuous(limits = c(0, 80)) + 
+  scale_fill_manual(values = c(palette), aesthetics = c("fill", "color")) + 
+  # Adjust theme
+  theme(legend.position = "none", 
+        plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = .5, size = 22, 
+                                  family = "Comic Sans MS", face = "bold", 
+                                  vjust = -1)) + 
+  labs(title = "Messi's Passes that Lead to Shots")
+```
+
+
+```{r}
+#7
+bwin_shot <- wins %>% 
+  filter(type_name == "Shot" & possession_team_name == "Barcelona")
+
+bwin_shot <- bwin_shot %>% 
+  mutate(
+    goal = case_when(
+      shot_outcome_name == "Goal" ~ "True", 
+      shot_outcome_name != "Goal" ~ "False",
+    )
+  )
+
+bnwin_shot <- nonwins %>% 
+  filter(type_name == "Shot" & possession_team_name == "Barcelona")
+
+bnwin_shot <- bnwin_shot %>% 
+  mutate(
+    goal = case_when(
+      shot_outcome_name == "Goal" ~ "True", 
+      shot_outcome_name != "Goal" ~ "False",
+    )
+  )
+```
+
+```{r}
+#8
+#wins
+wshot <- create_Pitch(grass_colour = "gray15", 
+             background_colour = "gray15", 
+             line_colour = "gray40") + 
+  geom_point(bwin_shot, mapping = aes(x = location_x, y = location_y, fill = goal, 
+                                    size = shot_statsbomb_xg), color = "gray60", 
+             pch = 21) + 
+  scale_size_continuous(limits = c(0, 1), breaks = c(.25, .5, .75, 1), 
+                        labels = c(".25", ".5", ".75", "1")) + 
+  scale_fill_manual(breaks = c("True", "False"), values = c("green3", "gray15"), 
+                    labels = c("Goal", "No Goal")) + 
+  theme(plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = 0.5, size = 20, 
+                                  family = "Comic Sons MS", face = "bold", 
+                                  vjust = -1), 
+        legend.position = c(.5, .2), 
+        legend.key = element_rect(fill = "transparent", color = "transparent"), 
+        legend.background = element_rect(fill = "gray20", 
+                                         colour = "transparent"), 
+        legend.title = element_text(hjust = .4, vjust = .5, size = 10, 
+                                    family = "Comic Sons MS", face = "bold", 
+                                    colour = "white"), 
+        legend.text = element_text(hjust = .4, vjust = .5, size = 8, 
+                                   family = "Comic Sons MS", face = "bold", 
+                                   colour = "white"), 
+        legend.direction = "horizontal", 
+        legend.box = "vertical", 
+        legend.box.just = "center", 
+        legend.margin = margin(t = .1, b = .1, l = .1, unit = "cm")) + 
+  labs(title = "Barcelona Shots in Wins", 
+       fill = "Outcome", 
+       size = "xG") + 
+  coord_flip(xlim = c(60, 120), ylim = c(0, 80)) + 
+  guides(fill = guide_legend(order = 1))
+
+ggsave("Shots in Wins.png", plot = wshot)
+
+#non wins
+nwshot <- create_Pitch(grass_colour = "gray15", 
+             background_colour = "gray15", 
+             line_colour = "gray40") + 
+  geom_point(bnwin_shot, mapping = aes(x = location_x, y = location_y, fill = goal, 
+                                    size = shot_statsbomb_xg), color = "gray60", 
+             pch = 21) + 
+  scale_size_continuous(limits = c(0, 1), breaks = c(.25, .5, .75, 1), 
+                        labels = c(".25", ".5", ".75", "1")) + 
+  scale_fill_manual(breaks = c("True", "False"), values = c("green3", "gray15"), 
+                    labels = c("Goal", "No Goal")) + 
+  theme(plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = 0.5, size = 20, 
+                                  family = "Comic Sons MS", face = "bold", 
+                                  vjust = -1), 
+        legend.position = c(.5, .2), 
+        legend.key = element_rect(fill = "transparent", color = "transparent"), 
+        legend.background = element_rect(fill = "gray20", 
+                                         colour = "transparent"), 
+        legend.title = element_text(hjust = .4, vjust = .5, size = 10, 
+                                    family = "Comic Sons MS", face = "bold", 
+                                    colour = "white"), 
+        legend.text = element_text(hjust = .4, vjust = .5, size = 8, 
+                                   family = "Comic Sons MS", face = "bold", 
+                                   colour = "white"), 
+        legend.direction = "horizontal", 
+        legend.box = "vertical", 
+        legend.box.just = "center", 
+        legend.margin = margin(t = .1, b = .1, l = .1, unit = "cm")) + 
+  labs(title = "Barcelona Shots in Non-Wins", 
+       fill = "Outcome", 
+       size = "xG") + 
+  coord_flip(xlim = c(60, 120), ylim = c(0, 80)) + 
+  guides(fill = guide_legend(order = 1))
+
+ggsave("Non-Wins shots.png", plot = nwshot)
+
+nwshot
+```
+
+```{r}
+#9
+xg <- all_data %>%
+  filter(team_name == "Barcelona") %>%
+  group_by(player_name) %>% 
+  summarise(xg = sum(shot_statsbomb_xg, na.rm = TRUE), 
+         ass = sum(pass_goal_assist == "True"), 
+         ga = xg+ass)
+
+top_xg <- xg %>% 
+  filter(player_name %in% c("Lionel Andrés Messi Cuccittini", "Luis Alberto Suárez Díaz", "Philippe Coutinho Correia", "Ivan Rakitić", "Jordi Alba Ramos"))
+
+xg_long <- top_xg %>% 
+  pivot_longer(
+    cols = c(xg, ass), 
+    names_to = "stat", 
+    values_to = "count"
+  )
+
+xg_long <- na.omit(xg_long)
+```
+
+```{r}
+#10
+ggplot(xg_long, aes(player_name, count, fill = stat)) + 
+  geom_bar(stat = "identity", position = "stack") + 
+  labs(title = "Top 5 Barcelona Goals and Assists", x = "Player", y = "Expected Goals + Assists", fill = "Statistic") + 
+  scale_fill_manual(
+    values = c("xg" = "#004D98", "ass" = "#A50044"), 
+    labels = c("xg" = "Expected Goals", "ass" = "Assists")
+  ) +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+```
+
+```{r}
+#11
+messi_suarez <- all_data %>% 
+  filter(pass_recipient_name == "Luis Alberto Suárez Díaz" & player_name == "Lionel Andrés Messi Cuccittini")
+
+palette <- brewer.pal(8, "Set3") # Change "Set3" to another Brewer palette if desired
+palette <- colorRampPalette(palette)(21)
+
+create_Pitch(grass_colour = "gray15", 
+             background_colour = "gray15", 
+             line_colour = "white") + 
+  # Add line segments for passes
+  geom_segment(data = messi_suarez, 
+               aes(x = location_x, y = location_y, 
+                   xend = pass_end_location_x, yend = pass_end_location_y, 
+                   color = player_name), 
+               size = 1, alpha = 0.7) + 
+  # Add density plot
+  geom_density_2d_filled(data = messi_suarez, 
+                         aes(x = location_x, y = location_y, fill = ..level..), 
+                         alpha = 0.4, contour_var = "ndensity", 
+                         breaks = seq(0.1, 1.0, length.out = 10)) + 
+  # Add points for start locations
+  geom_point(data = messi_suarez, 
+             aes(x = location_x, y = location_y, color = player_name), 
+             size = 2, alpha = 0.8) + 
+  # Set the scales and limits
+  scale_x_continuous(limits = c(0, 120)) + 
+  scale_y_continuous(limits = c(0, 80)) + 
+  scale_fill_manual(values = c(palette), aesthetics = c("fill", "color")) + 
+  # Adjust theme
+  theme(legend.position = "none", 
+        plot.background = element_rect(colour = "gray15", fill = "gray15"), 
+        plot.title = element_text(color = "white", hjust = .5, size = 22, 
+                                  family = "Comic Sans MS", face = "bold", 
+                                  vjust = -1)) + 
+  labs(title = "Lionel Messi's Passes to Luis Suarez")
+```
+
